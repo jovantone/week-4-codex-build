@@ -1,0 +1,15 @@
+allowBuilds:
+  esbuild: true
+  sharp: true
+
+# This checkout is shared by Windows and WSL. Keep native optional packages
+# for both runtimes instead of installing only the current host's binaries.
+supportedArchitectures:
+  os:
+    - current
+    - win32
+    - linux
+  cpu:
+    - x64
+  libc:
+    - glibc

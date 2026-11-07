@@ -1,0 +1,44 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+if (Astro.locals.user) return Astro.redirect('/rooms/lobby');
+const error = Astro.url.searchParams.get('error');
+---
+<Base title="Come on in — Commonroom">
+  <main class="join-page">
+    <a class="brand join-brand" href="/join"><span class="brand-mark"><Icon name="chat" size={25}/></span>commonroom<span class="brand-dot">.</span></a>
+    <div class="join-layout">
+      <section class="join-story">
+        <span class="eyebrow"><span class="tiny-dot"></span> GOOD COMPANY, JUST A CLICK AWAY</span>
+        <h1>Good conversations<br/>start with <em>hello.</em></h1>
+        <p>A little space to share ideas, catch up, and find your people. Pick a name and make yourself at home.</p>
+        <div class="conversation-art" aria-hidden="true">
+          <div class="art-orbit"></div><span class="art-spark">✳</span>
+          <div class="art-bubble art-one"><span class="art-avatar">hey</span><div><b>Room for everyone.</b><span>And every kind of conversation.</span></div><i>✦</i></div>
+          <div class="art-bubble art-two"><span>Come as you are.</span><span>☀</span></div>
+          <div class="art-bubble art-three"><span class="art-dots">● ● ●</span><span>Something good is starting</span></div>
+        </div>
+        <div class="join-footnote"><Icon name="check" size={16}/> No passwords. Just people.</div>
+      </section>
+      <section class="join-card" x-data="{ nickname: '' }">
+        <span class="welcome-icon">✳</span><h2>Make yourself at home</h2><p>What should we call you?</p>
+        <form action="/api/join" method="POST" hx-post="/api/join" hx-swap="none" id="join-form">
+          <label for="nickname">Your nickname</label>
+          <input id="nickname" name="nickname" required minlength="2" maxlength="24" pattern="[a-zA-Z0-9_][a-zA-Z0-9_-]{1,23}" placeholder="e.g. sunny_side" autocomplete="nickname" autofocus x-model="nickname"/>
+          <p class="field-hint">2–24 characters. Letters, numbers, _ and - are welcome.</p>
+          <div class="name-preview"><span class="avatar" x-text="nickname.slice(0, 2).toUpperCase() || 'YO'">YO</span><div><strong x-text="nickname || 'Your lovely nickname'">Your lovely nickname</strong><small>Ready to join the conversation</small></div><span class="tiny-dot"></span></div>
+          <p id="join-error" class="form-error" role="alert">{error}</p>
+          <button class="primary-button join-submit" type="submit">Step inside <Icon name="arrow" class="rotate" size={18}/></button>
+        </form>
+        <p class="join-note">Your name stays with this browser for 30 days.<br/>No account or email needed.</p>
+      </section>
+    </div>
+    <footer class="join-footer"><span>A shared space. A little more human.</span><span>Say hello. Stay a while. <span class="footer-star">✳</span></span></footer>
+  </main>
+</Base>
+<script>
+  document.addEventListener('htmx:responseError', (event: any) => {
+    if (event.detail.elt.id !== 'join-form') return;
+    try { document.getElementById('join-error')!.textContent = JSON.parse(event.detail.xhr.responseText).error; } catch {}
+  });
+</script>

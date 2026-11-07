@@ -1,0 +1,58 @@
+---
+import Base from './Base.astro';
+import Icon from '../components/Icon.astro';
+import { listRooms, history } from '../lib/db.mjs';
+import { live } from '../lib/live.mjs';
+const { room = null } = Astro.props;
+const user = Astro.locals.user!;
+const rooms: { id: string; name: string; description: string | null }[] = await listRooms();
+const initial = room ? await history(room.id, null, null) : null;
+const counts = live.counts();
+---
+<Base title={room ? `${room.name} — Commonroom` : 'Find your room — Commonroom'}>
+  <div class:list={['workspace', { directory: !room }]} id="chat-app" data-room={room?.id}>
+    <aside class="sidebar">
+      <a href="/rooms" class="brand"><span class="brand-mark"><Icon name="chat" size={23}/></span>commonroom<span class="brand-dot">.</span></a>
+      <div class="workspace-label"><span class="workspace-monogram">C</span><div><strong>The shared space</strong><small>A little more human</small></div><span class="live-dot"></span></div>
+      <a class:list={['browse-link', { selected: !room }]} href="/rooms"><Icon name="search" size={18}/> Explore rooms <Icon name="chevron" size={15}/></a>
+      <div class="sidebar-heading"><span>YOUR ROOMS</span><button class="icon-button" data-open="new-room" aria-label="Create room"><Icon name="plus" size={17}/></button></div>
+      <nav id="room-nav" aria-label="Chat rooms">
+        {rooms.map(r => <a href={`/rooms/${r.id}`} class:list={['room-link', { active: r.id === room?.id }]} data-room-link={r.id}><span class="room-hash">#</span><span class="room-link-name">{r.name}</span><span class="room-count" data-count={r.id}>{counts[r.id] || ''}</span></a>)}
+      </nav>
+      <button class="create-room-link" data-open="new-room"><Icon name="plus" size={17}/> Create a room</button>
+      <div class="sidebar-bottom"><div class="sidebar-note"><span>Better together.</span><p>A place for the big ideas<br/>and the little hellos.</p><span class="note-flower">✳</span></div>
+      <div class="profile"><button class="profile-edit" data-open="rename" title="Change your nickname"><span class="avatar own-avatar" style={`--avatar:${user.color}`}>{user.nickname.slice(0, 2).toUpperCase()}</span><span><strong class="own-name">{user.nickname}</strong><small><span class="tiny-dot"></span> Here for a chat</small></span><Icon name="edit" size={14}/></button><form method="POST" action="/api/leave"><button class="icon-button" aria-label="Exit chat" title="Exit chat"><Icon name="exit" size={18}/></button></form></div></div>
+    </aside>
+    <main class="main-panel">
+      <header class="room-header">
+        <div class="room-title"><a href="/rooms" class="mobile-back icon-button" aria-label="Back to rooms"><Icon name="arrow"/></a><span class="header-hash">{room ? '#' : '✳'}</span><div><h1>{room?.name || 'Explore rooms'}</h1><p>{room?.description || 'Find a conversation that feels like you.'}</p></div></div>
+        <div class="header-actions">
+          {room && <button class="online-button" id="members-toggle" aria-expanded="true"><Icon name="users" size={17}/><span id="online-count">0</span><span class="online-label">online</span></button>}
+          <span class="header-divider"></span>
+          <button class="icon-button" id="sound-toggle" aria-label="Enable notification sounds" title="Enable notification sounds" aria-pressed="false"><span id="sound-on" hidden><Icon name="volume" size={19}/></span><span id="sound-off"><Icon name="mute" size={19}/></span></button>
+          <div class="notification-wrap"><button class="icon-button" id="notification-toggle" aria-label="Notifications" aria-expanded="false"><Icon name="bell" size={20}/><span id="notification-badge" hidden>0</span></button><div class="notification-panel" id="notification-panel" hidden><div class="notification-title"><strong>Your mentions</strong><button id="read-notifications">Mark all read</button></div><div id="notification-list"><p class="notification-empty">All caught up. Nice and quiet.</p></div></div></div>
+          <button class="icon-button" id="theme-toggle" aria-label="Toggle color theme" title="Toggle color theme"><Icon name="moon" size={19}/></button>
+        </div>
+      </header>
+      {room ? <div class="chat-body">
+        <section class="conversation" aria-label={`${room.name} conversation`}>
+          <div class="connection-banner" id="connection-banner" hidden role="status">Reconnecting… your conversation will catch up automatically.</div>
+          <div class="message-scroll" id="message-scroll" tabindex="0" aria-label="Message history">
+            <div class="room-welcome"><span class="welcome-room-icon">#</span><div><span class="eyebrow">THE START OF SOMETHING GOOD</span><h2>Welcome to {room.name}<span>.</span></h2><p>{room.id === 'lobby' ? 'The front door to our shared space. Introduce yourself, share a thought, or just say hello.' : room.description || 'Your space to share ideas, ask questions, and keep the conversation going.'}</p></div></div>
+            <div class="room-topic"><span class="topic-star">✦</span><span>Good company starts with a little kindness. Make yourself at home.</span><span class="topic-tag">ROOM TO CONNECT</span></div>
+            <div class="history-control"><button id="load-earlier" hidden>Load earlier messages</button></div>
+            <div id="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+            <div id="empty-chat" class="empty-chat" hidden><div class="empty-chat-art"><span>✳</span><Icon name="chat" size={44}/><span>✦</span></div><h3>A little hello goes a long way.</h3><p>Be the first to get the conversation going.</p></div>
+          </div>
+          <button id="new-messages" class="new-messages" hidden>New messages ↓</button>
+          <div class="composer-area"><div id="typing" class="typing-indicator" role="status"></div><form id="message-form"><div class="composer"><label class="sr-only" for="message-input">Message {room.name}</label><textarea id="message-input" name="content" rows="1" maxlength="4000" placeholder={`Message #${room.name.toLowerCase()}`} required></textarea><div id="mention-menu" class="mention-menu" role="listbox" hidden aria-label="Mention someone"></div><div class="composer-tools"><span class="composer-help"><span class="at-sign">@</span> to bring someone in</span><button type="submit" id="send-button" class="send-button">Send <Icon name="send" size={16}/></button></div></div><div class="composer-footer"><span><kbd>Enter</kbd> to send <span class="key-separator">·</span> <kbd>Shift + Enter</kbd> for a new line</span><span id="message-length">A space for good conversation <span class="tiny-dot"></span></span></div><p class="form-error" id="message-error" role="alert"></p></form></div>
+        </section>
+        <aside class="members-panel" id="members-panel"><div class="members-heading"><span>IN THIS ROOM</span><span id="member-count">0</span></div><div class="members-status"><span class="tiny-dot"></span> Here, in good company</div><div id="member-list"></div><div class="members-note"><Icon name="chat" size={25}/><p>A name. A hello.<br/>A new connection.</p><span>That's all it takes.</span></div><div class="connection-status"><span class="tiny-dot" id="connection-dot"></span><span id="connection-label">Connecting</span><span class="connection-bars">▂▄▆</span></div></aside>
+      </div> : <section class="directory-content"><div class="directory-intro"><span class="eyebrow">FIND YOUR LITTLE CORNER</span><h2>There’s a room for that<span>.</span></h2><p>Jump into a conversation, or start something of your own.</p><button class="primary-button" data-open="new-room"><Icon name="plus" size={17}/> New room</button></div><div class="room-cards" id="room-cards">{rooms.map(r => <a class="room-card" href={`/rooms/${r.id}`} data-card={r.id}><span class="card-hash">#</span><span class="card-online"><span class="tiny-dot"></span><span data-count={r.id}>{counts[r.id] || 0}</span> online</span><h3>{r.name}</h3><p>{r.description || 'A fresh space for a new conversation.'}</p><span class="card-enter">Join conversation <Icon name="arrow" class="rotate" size={17}/></span></a>)}<button class="room-card create-card" data-open="new-room"><Icon name="plus" size={30}/><h3>Make room for an idea.</h3><p>Create a space and see where it goes.</p><span>Create a room</span></button></div><div class="directory-bottom"><span>✳</span><p>Shared spaces. Different perspectives. Good conversations.</p></div></section>}
+    </main>
+  </div>
+  <dialog id="new-room" class="modal"><form id="new-room-form"><div class="modal-heading"><span class="modal-icon">#</span><button type="button" class="icon-button" data-close aria-label="Close dialog"><Icon name="close"/></button></div><h2>A new space for your people.</h2><p>Big idea or small talk. Give it a home.</p><label for="room-name">Room name</label><input id="room-name" name="name" required minlength="2" maxlength="40" placeholder="e.g. The creative corner"/><label for="room-description">A little about this room <span>(optional)</span></label><textarea id="room-description" name="description" maxlength="160" rows="3" placeholder="What will you talk about?"></textarea><p class="form-error" role="alert"></p><button class="primary-button" type="submit">Create room <Icon name="arrow" class="rotate" size={18}/></button></form></dialog>
+  <dialog id="rename" class="modal"><form id="rename-form"><div class="modal-heading"><span class="modal-icon">✳</span><button type="button" class="icon-button" data-close aria-label="Close dialog"><Icon name="close"/></button></div><h2>A fresh introduction.</h2><p>Same you, a new name. Everyone will get the memo.</p><label for="new-nickname">Your nickname</label><input id="new-nickname" name="nickname" value={user.nickname} required minlength="2" maxlength="24" pattern="[a-zA-Z0-9_][a-zA-Z0-9_-]{1,23}"/><p class="field-hint">Letters, numbers, underscores and hyphens.</p><p class="form-error" role="alert"></p><button class="primary-button" type="submit">Save nickname <Icon name="check" size={18}/></button></form></dialog>
+  <script id="initial-state" type="application/json" set:html={JSON.stringify({ user, room, rooms, initial }).replace(/</g, '\\u003c')}/>
+</Base>
+<script>import '../scripts/chat';</script>

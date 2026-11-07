@@ -1,0 +1,22 @@
+---
+import '../styles/global.css';
+const { title = 'Commonroom — A place to connect' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="theme-color" content="#f8f7f4"/><meta name="description" content="A little space for good conversation. Join a room, find your people, and say hello."/>
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+    <script is:inline>try { document.documentElement.dataset.theme = localStorage.getItem('commonroom-theme') || 'light'; } catch {}</script>
+  </head>
+  <body><slot/><div id="toast" role="status" aria-live="polite"></div></body>
+</html>
+<script>
+  import Alpine from 'alpinejs';
+  import htmx from 'htmx.org';
+  (window as any).Alpine = Alpine;
+  (window as any).htmx = htmx;
+  Alpine.start();
+</script>
